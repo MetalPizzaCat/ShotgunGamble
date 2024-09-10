@@ -7,9 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -25,11 +27,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.metalpizzacat.shotgungamble.game.Item
 import com.metalpizzacat.shotgungamble.shake.ShakeConfig
@@ -54,6 +59,27 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@Composable
+fun LoadoutDisplay(live: Int, blank: Int, modifier: Modifier = Modifier) {
+    Row(modifier) {
+        for (i in 0..<live) {
+            Icon(
+                painterResource(id = R.drawable.shell_live),
+                contentDescription = "live shell",
+                tint = Color.Unspecified,
+                modifier = Modifier.padding(5.dp)
+            )
+        }
+        for (i in 0..<blank) {
+            Icon(
+                painterResource(id = R.drawable.shell_blank),
+                contentDescription = "blank shell",
+                tint = Color.Unspecified,
+                modifier = Modifier.padding(5.dp)
+            )
+        }
+    }
+}
 
 @Composable
 fun Playfield(modifier: Modifier = Modifier, viewModel: GameViewModel = viewModel()) {
@@ -65,6 +91,10 @@ fun Playfield(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
             delay(1000)
             viewModel.runDealerLogic()
         }
+    }
+    LaunchedEffect(viewModel.showingGameSetup) {
+        delay(3000)
+        viewModel.showingGameSetup = false
     }
     Column(modifier = modifier) {
         Column {
@@ -136,6 +166,20 @@ fun Playfield(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
                 Text(text = "Self")
             }
         }
+    }
+    AnimatedVisibility(visible = viewModel.showingGameSetup) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(color = colorResource(id = R.color.selection_background))
+        ) {
+            LoadoutDisplay(
+                live = viewModel.shotgun.liveCount,
+                blank = viewModel.shotgun.blankCount,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+
     }
 }
 

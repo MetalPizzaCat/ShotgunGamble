@@ -30,6 +30,8 @@ class GameViewModel : ViewModel() {
     var maxHealthForRound by mutableIntStateOf(5)
         private set
 
+    var showingGameSetup by mutableStateOf(false)
+
     val shotgun: Shotgun = Shotgun()
 
 
@@ -39,6 +41,7 @@ class GameViewModel : ViewModel() {
         dealer.reset(maxHealthForRound)
         shotgun.generateShells()
         gameOver = false
+        showingGameSetup = true
     }
 
 
