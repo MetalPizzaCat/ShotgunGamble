@@ -99,9 +99,9 @@ class Shotgun {
     }
 
     fun generateShells() {
-        liveCount = Random.nextInt(1, 5)
-        blankCount = Random.nextInt(1, 5)
-
+        liveCount = 1//Random.nextInt(1, 5)
+        blankCount = 1//Random.nextInt(1, 5)
+        currentShell = 0
         shells = ArrayList()
         for (i in 0..<liveCount) {
             shells.add(true)

@@ -2,17 +2,16 @@ package com.metalpizzacat.shotgungamble
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.metalpizzacat.shotgungamble.game.Gambler
+import com.metalpizzacat.shotgungamble.game.GameState
 import com.metalpizzacat.shotgungamble.game.Item
 import com.metalpizzacat.shotgungamble.game.Shotgun
 import com.metalpizzacat.shotgungamble.shake.ShakeConfig
 import com.metalpizzacat.shotgungamble.shake.ShakeController
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.random.Random
 
 class GameViewModel : ViewModel() {
 
@@ -21,7 +20,21 @@ class GameViewModel : ViewModel() {
 
     val shakeController = ShakeController()
 
-    var gameOver by mutableStateOf(false)
+    var currentGameState by mutableStateOf(GameState.NORMAL)
+        private set
+
+    /**
+     * If true neither player or dealer will receive actual damage from the shot
+     */
+    var isUsingImmortalityCheat by mutableStateOf(false)
+
+    /**
+     * If true then the setup screen should be visible
+     */
+    val isShowingGameSetup: Boolean
+        get() = currentGameState == GameState.RESTOCKING || currentGameState == GameState.SHOWING_GAME_SETUP
+
+    var outOfAmmo by mutableStateOf(false)
         private set
 
     var playerTurn by mutableStateOf(true)
@@ -30,26 +43,40 @@ class GameViewModel : ViewModel() {
     var maxHealthForRound by mutableIntStateOf(5)
         private set
 
-    var showingGameSetup by mutableStateOf(false)
 
     val shotgun: Shotgun = Shotgun()
 
 
-    fun resetGame() {
-        maxHealthForRound = 5
+    fun restartGame() {
+        maxHealthForRound = Random.nextInt(2, 6)
         player.reset(maxHealthForRound)
         dealer.reset(maxHealthForRound)
+        currentGameState = GameState.SHOWING_GAME_SETUP
+        softRestartRound()
+    }
+
+
+    private fun endRound() {
+        currentGameState = GameState.GAME_OVER
+    }
+
+    /**
+     * Soft restart the game putting new ammo in the shotgun and giving players new items
+     * This does not change players health
+     */
+    private fun softRestartRound() {
         shotgun.generateShells()
-        gameOver = false
-        showingGameSetup = true
+        playerTurn = true
+        val itemsForRound = Random.nextInt(1, 5)
+        for (i in 0..<itemsForRound) {
+            player.addItem(Item.entries.random())
+        }
+        for (i in 0..<itemsForRound) {
+            dealer.addItem(Item.entries.random())
+        }
     }
 
-
-    fun endRound() {
-        gameOver = true
-    }
-
-    fun displayShell() {
+    private fun displayShell() {
         shakeController.shake(
             ShakeConfig(
                 5,
@@ -60,85 +87,51 @@ class GameViewModel : ViewModel() {
         )
     }
 
-    fun shootPlayerAsPlayer() {
-        displayShell()
-        if (!shotgun.shoot()) {
-            return
-        }
-        shotgun.lastShellType?.let {
-            if (it) {
-                player.dealDamage(shotgun.damage)
-                playerTurn = false
-                return
-            }
-        }
+    fun finishShowingGameSetup() {
+        currentGameState = GameState.NORMAL
     }
 
-    /**
-     * Shoot dealer as player
-     * @return True if successfully shot, false if shell was blank
-     */
-    fun shootDealerAsPlayer() {
-        displayShell()
-        if (!shotgun.shoot()) {
+    fun shoot(target: Gambler, shooter: Gambler) {
+        if (currentGameState != GameState.NORMAL) {
             return
         }
-        shotgun.lastShellType?.let {
-            playerTurn = false
-            if (!it) {
-                return
+        displayShell()
+        shotgun.shoot()
+        shotgun.lastShellType?.let { live ->
+            if (live) {
+                if (!isUsingImmortalityCheat) {
+                    target.dealDamage(shotgun.damage)
+                }
+                playerTurn = !playerTurn
+            } else if (target == shooter) {
+                // skip a turn
+            } else {
+                // if we shot with a blank we loose turn
+                playerTurn = !playerTurn
             }
-            dealer.dealDamage(shotgun.damage)
-            if (dealer.health <= 0) {
+            if (target.health <= 0) {
                 endRound()
-            }
-        }
-    }
-
-    fun shootPlayerAsDealer(){
-        displayShell()
-        if (!shotgun.shoot()) {
-            return
-        }
-        shotgun.lastShellType?.let {
-            playerTurn = true
-            if (!it) {
-                return
-            }
-            player.dealDamage(shotgun.damage)
-            if (player.health <= 0) {
-                endRound()
-            }
-        }
-    }
-
-    fun shootDealerAsDealer(){
-        displayShell()
-        if (!shotgun.shoot()) {
-            return
-        }
-        shotgun.lastShellType?.let {
-            if (it) {
-                dealer.dealDamage(shotgun.damage)
-                playerTurn = true
-                return
+            } else if (shotgun.isEmpty) {
+                currentGameState = GameState.RESTOCKING
+                softRestartRound()
             }
         }
     }
 
     fun runDealerLogic() {
-        val chanceOfLive =  (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() /  shotgun.liveCount.toFloat()
-        val chanceOfBlank =  (shotgun.blankCount - shotgun.shotShells.count { !it }).toFloat() /  shotgun.blankCount.toFloat()
+        val chanceOfLive =
+            (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() / shotgun.liveCount.toFloat()
+        val chanceOfBlank =
+            (shotgun.blankCount - shotgun.shotShells.count { !it }).toFloat() / shotgun.blankCount.toFloat()
 
-        if(chanceOfBlank > chanceOfLive){
-            shootDealerAsDealer()
-        }
-        else{
-            shootPlayerAsDealer()
+        if (chanceOfBlank > chanceOfLive) {
+            shoot(target = dealer, shooter = dealer)
+        } else {
+            shoot(target = player, shooter = dealer)
         }
     }
 
     init {
-        resetGame()
+        restartGame()
     }
 }
