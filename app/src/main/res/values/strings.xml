@@ -7,7 +7,7 @@
     <string name="handsaw_desc">Deal double damage and reset after shooting</string>
     <string name="beer_desc">Eject current shell</string>
     <string name="cuff_name">Handcuffs</string>
-    <string name="cuff_desc">Oponent skips a turn</string>
+    <string name="cuff_desc">Opponent skips a turn</string>
     <string name="phone_name">Burner phone</string>
     <string name="phone_desc">Tells value of a random shell that is left in the gun</string>
     <string name="shell_0">Current shell is</string>
