@@ -10,8 +10,8 @@ enum class Item(
     val displayNameRes: Int = R.string.missing_name,
     val descriptionRes: Int = R.string.missing_desc
 ) {
-    HANDSAW(R.drawable.missing, R.string.handsaw),
-    BEER(R.drawable.missing),
-    HANDCUFFS(R.drawable.missing),
+    HANDSAW(R.drawable.handsaw, R.string.handsaw),
+    BEER(R.drawable.beer),
+    HANDCUFFS(R.drawable.handcuffs),
     PHONE(R.drawable.missing)
 }

@@ -29,13 +29,17 @@ class GameViewModel : ViewModel() {
     var isUsingImmortalityCheat by mutableStateOf(false)
 
     /**
+     * Which item is player currently trying to use
+     */
+    var currentItem by mutableStateOf<Item?>(null)
+        private set
+
+    /**
      * If true then the setup screen should be visible
      */
     val isShowingGameSetup: Boolean
         get() = currentGameState == GameState.RESTOCKING || currentGameState == GameState.SHOWING_GAME_SETUP
 
-    var outOfAmmo by mutableStateOf(false)
-        private set
 
     var playerTurn by mutableStateOf(true)
         private set
@@ -53,6 +57,25 @@ class GameViewModel : ViewModel() {
         dealer.reset(maxHealthForRound)
         currentGameState = GameState.SHOWING_GAME_SETUP
         softRestartRound()
+    }
+
+    fun startChoosingShootingTarget() {
+        currentGameState = GameState.USING_SHOTGUN
+    }
+
+    fun stopChoosingShootingTarget() {
+        currentGameState = GameState.NORMAL
+    }
+
+    fun startChoosingItem(item: Item) {
+        currentGameState = GameState.USING_ITEM
+        currentItem = item
+    }
+
+
+    fun stopChoosingItem() {
+        currentGameState = GameState.NORMAL
+        currentItem = null
     }
 
 
@@ -92,9 +115,10 @@ class GameViewModel : ViewModel() {
     }
 
     fun shoot(target: Gambler, shooter: Gambler) {
-        if (currentGameState != GameState.NORMAL) {
+        if (currentGameState != GameState.USING_SHOTGUN && currentGameState != GameState.NORMAL) {
             return
         }
+        currentGameState = GameState.NORMAL
         displayShell()
         shotgun.shoot()
         shotgun.lastShellType?.let { live ->

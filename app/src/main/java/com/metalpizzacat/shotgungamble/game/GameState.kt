@@ -15,6 +15,8 @@ enum class GameState {
      * There is no more ammo left, but both players are still alive
      */
     RESTOCKING,
+    USING_SHOTGUN,
+    USING_ITEM,
     /**
      * One of the players died
      */
