@@ -10,10 +10,10 @@ import kotlin.math.max
 class Gambler {
     val items = mutableStateListOf<Item>()
 
-    val lastDrawnItems : ArrayList<Item> = ArrayList()
+    val lastDrawnItems: ArrayList<Item> = ArrayList()
 
     var health by mutableIntStateOf(0)
-        private
+        private set
 
     var handcuffed by mutableStateOf(false)
 
@@ -23,15 +23,15 @@ class Gambler {
     val canDoATurn: Boolean
         get() = !handcuffed
 
-    fun dealDamage(damage : Int){
+    fun dealDamage(damage: Int) {
         health = max(0, health - damage)
     }
 
-    fun addItem(item : Item){
-        if(items.size < 8){
-        items.add(item)
-        lastDrawnItems.add(item)
-            }
+    fun addItem(item: Item) {
+        if (items.size < 8) {
+            items.add(item)
+            lastDrawnItems.add(item)
+        }
     }
 
     fun reset(roundHealth: Int) {

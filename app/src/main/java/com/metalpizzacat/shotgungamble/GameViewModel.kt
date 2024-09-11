@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import com.metalpizzacat.shotgungamble.game.Gambler
 import com.metalpizzacat.shotgungamble.game.GameState
 import com.metalpizzacat.shotgungamble.game.Item
+import com.metalpizzacat.shotgungamble.game.RevealedShellData
+import com.metalpizzacat.shotgungamble.game.RevealedShellNaming
 import com.metalpizzacat.shotgungamble.game.Shotgun
 import com.metalpizzacat.shotgungamble.shake.ShakeConfig
 import com.metalpizzacat.shotgungamble.shake.ShakeController
@@ -27,6 +29,8 @@ class GameViewModel : ViewModel() {
      * If true neither player or dealer will receive actual damage from the shot
      */
     var isUsingImmortalityCheat by mutableStateOf(false)
+
+    var lastRevealedShell by mutableStateOf<RevealedShellData?>(null)
 
     /**
      * Which item is player currently trying to use
@@ -59,17 +63,24 @@ class GameViewModel : ViewModel() {
         softRestartRound()
     }
 
-    fun startChoosingShootingTarget() {
-        currentGameState = GameState.USING_SHOTGUN
-    }
+    var isChoosingShootingTarget: Boolean
+        get() = currentGameState == GameState.USING_SHOTGUN
+        set(value) {
+            currentGameState = if (value) {
+                GameState.USING_SHOTGUN
+            } else {
+                GameState.NORMAL
+            }
+        }
 
-    fun stopChoosingShootingTarget() {
-        currentGameState = GameState.NORMAL
-    }
 
     fun startChoosingItem(item: Item) {
         currentGameState = GameState.USING_ITEM
         currentItem = item
+    }
+
+    fun finishShowingOutofAmmoScreen() {
+        currentGameState = GameState.SHOWING_GAME_SETUP
     }
 
 
@@ -92,7 +103,8 @@ class GameViewModel : ViewModel() {
         playerTurn = true
         val itemsForRound = Random.nextInt(1, 5)
         for (i in 0..<itemsForRound) {
-            player.addItem(Item.entries.random())
+            //player.addItem(Item.entries.random())
+            player.addItem(Item.PHONE)
         }
         for (i in 0..<itemsForRound) {
             dealer.addItem(Item.entries.random())
@@ -142,6 +154,15 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    private fun ejectShell() {
+        displayShell()
+        shotgun.shoot()
+        if (shotgun.isEmpty) {
+            currentGameState = GameState.RESTOCKING
+            softRestartRound()
+        }
+    }
+
     fun runDealerLogic() {
         val chanceOfLive =
             (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() / shotgun.liveCount.toFloat()
@@ -153,6 +174,51 @@ class GameViewModel : ViewModel() {
         } else {
             shoot(target = player, shooter = dealer)
         }
+    }
+
+    private fun applyItem(item: Item, user: Gambler, target: Gambler): Boolean {
+        when (item) {
+            Item.HANDSAW -> {
+                if (!shotgun.isSawedOff) {
+                    shotgun.isSawedOff = true
+                } else {
+                    return false
+                }
+            }
+
+            Item.BEER -> ejectShell()
+            Item.HANDCUFFS -> {
+                if (target.handcuffed) {
+                    return false
+                }
+                target.handcuffed = true
+            }
+
+            Item.PHONE -> {
+                val shellNumber = Random.nextInt(shotgun.currentShell, shotgun.shellCount)
+                lastRevealedShell = RevealedShellData(
+                    RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
+                    shotgun[shellNumber]
+                )
+            }
+        }
+        return true
+    }
+
+    fun useItem(item: Item, user: Gambler) {
+        applyItem(
+            item, if (user != player) {
+                dealer
+            } else {
+                player
+            }, if (user == player) {
+                dealer
+            } else {
+                player
+            }
+        )
+        currentGameState = GameState.NORMAL
+        user.items.remove(item)
     }
 
     init {

@@ -1,6 +1,21 @@
 <resources>
     <string name="app_name">shotgungamble</string>
-    <string name="handsaw">Handsaw</string>
+    <string name="handsaw_name">Handsaw</string>
     <string name="missing_name">NO NAME</string>
     <string name="missing_desc">NO DESC</string>
+    <string name="beer_name">Beer</string>
+    <string name="handsaw_desc">Deal double damage and reset after shooting</string>
+    <string name="beer_desc">Eject current shell</string>
+    <string name="cuff_name">Handcuffs</string>
+    <string name="cuff_desc">Oponent skips a turn</string>
+    <string name="phone_name">Burner phone</string>
+    <string name="phone_desc">Tells value of a random shell that is left in the gun</string>
+    <string name="shell_0">Current shell is</string>
+    <string name="shell_1">Second shell is</string>
+    <string name="shell_2">Third shell is</string>
+    <string name="shell_3">Fourth shell is</string>
+    <string name="shell_4">Fifth shell is</string>
+    <string name="shell_5">Sixth shell is</string>
+    <string name="shell_6">Seventh shell is</string>
+    <string name="shell_7">Eitght shell is</string>
 </resources>

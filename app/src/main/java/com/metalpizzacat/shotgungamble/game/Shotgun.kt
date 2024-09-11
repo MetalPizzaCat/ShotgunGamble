@@ -58,7 +58,6 @@ class Shotgun {
      * Will the shotgun deal double damage or not
      */
     var isSawedOff by mutableStateOf(false)
-        private set
 
     /**
      * Total amount of shells used in this round
@@ -77,6 +76,8 @@ class Shotgun {
         } else {
             1
         }
+
+    operator fun get(i: Int) = shells[i]
 
     /**
      * Advance the shell counter by one and update the state based on the used shell
