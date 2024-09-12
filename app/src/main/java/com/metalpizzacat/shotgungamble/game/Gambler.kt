@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.max
 import kotlin.math.min
 
-class Gambler {
+class Gambler(val nameResId: Int) {
     val items = mutableStateListOf<Item>()
 
     val lastDrawnItems: ArrayList<Item> = ArrayList()

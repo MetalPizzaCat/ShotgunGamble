@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">shotgungamble</string>
+    <string name="app_name">Shotgun gambling</string>
     <string name="handsaw_name">Handsaw</string>
     <string name="missing_name">NO NAME</string>
     <string name="missing_desc">NO DESC</string>
@@ -17,16 +17,28 @@
     <string name="shell_4">Fifth shell is</string>
     <string name="shell_5">Sixth shell is</string>
     <string name="shell_6">Seventh shell is</string>
-    <string name="shell_7">Eitght shell is</string>
-    <string name="phone_no_shell">How unfortunate...</string>
-    <string name="andrenalin_name">Andrenalin</string>
-    <string name="adrenalin_desc">Steal an item from the opponent and immedietely use it</string>
+    <string name="shell_7">Eight shell is</string>
+    <string name="phone_no_shell">How unfortunate…</string>
+    <string name="andrenalin_name">Adrenalin</string>
+    <string name="adrenalin_desc">Steal an item from the opponent and immediately use it</string>
     <string name="inv_name">Shell inverter</string>
     <string name="inv_desc">Invert current shell</string>
     <string name="med_name">Expired Medicine</string>
-    <string name="med_desc">Gain 2 health poinst or loose 1</string>
+    <string name="med_desc">Gain 2 health points or loose 1</string>
     <string name="smoke_name">Cigarette</string>
     <string name="smoke_desc">Gain 1 health</string>
     <string name="glass_name">Magnifying Glass</string>
     <string name="glass_desc">See what shell is currently loaded</string>
+    <string name="used_saw">Used handsaw</string>
+    <string name="used_beer">Ejected a shell</string>
+    <string name="used_handcuffs">Used handcuffs</string>
+    <string name="used_smoke">Restored 1 health point</string>
+    <string name="used_pill_fail">Bad luck… Lost 1hp</string>
+    <string name="used_pill_success">Restored 2hp</string>
+    <string name="shot_live">Shot live</string>
+    <string name="shot_blank">Shot blank</string>
+    <string name="used_adrenalin">Used adrenalin… Steal an item from opponent</string>
+    <string name="used_inverter">Inverted current shell</string>
+    <string name="player">Player</string>
+    <string name="dealer">Dealer</string>
 </resources>

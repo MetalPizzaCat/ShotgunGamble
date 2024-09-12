@@ -103,41 +103,39 @@ fun GameOverScreen(modifier: Modifier = Modifier, viewModel: GameViewModel = vie
 }
 
 @Composable
-fun ShowToast(text: String) {
-    val context = LocalContext.current
-    LaunchedEffect(text) {
-        Toast.makeText(context, text, Toast.LENGTH_LONG).show()
-    }
-}
-
-@Composable
 fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewModel()) {
-
+    val context = LocalContext.current
     LaunchedEffect(viewModel.shotgun.currentShell) {
-        if (!viewModel.playerTurn) {
+        if (!viewModel.isPlayerTurn) {
             // fake delay to avoid everything happening instantly
             delay(1000)
             viewModel.runDealerLogic()
         }
     }
 
-    viewModel.lastRevealedShell?.let {
-        if (it.number == RevealedShellNaming.TOUGH_LUCK) {
-            ShowToast(
-                text = stringResource(id = it.number.textResId)
-            )
-        } else {
-            ShowToast(
-                text = "${stringResource(id = it.number.textResId)} ${
-                    if (it.isLive) {
-                        "Live"
-                    } else {
-                        "Blank"
-                    }
-                }"
-            )
+    // this exists separately from other message stuff simply to avoid having 16 additional enum entries
+    LaunchedEffect(viewModel.lastRevealedShell) {
+        viewModel.lastRevealedShell?.let {
+            if (it.number == RevealedShellNaming.TOUGH_LUCK) {
+                Toast.makeText(
+                    context, context.getString(it.number.textResId), Toast.LENGTH_LONG
+                ).show()
+            } else {
+                Toast.makeText(
+                    context, "${context.getString(it.number.textResId)} ${
+                        if (it.isLive) {
+                            "Live"
+                        } else {
+                            "Blank"
+                        }
+                    }", Toast.LENGTH_LONG
+                )
+                    .show()
+            }
+            viewModel.lastRevealedShell = null
         }
-        viewModel.lastRevealedShell = null
+
+
     }
     Box(
         modifier = modifier
@@ -166,7 +164,7 @@ fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
                 modifier = modifier
                     .align(Alignment.Center)
             ) {
-                if (viewModel.playerTurn) {
+                if (viewModel.isPlayerTurn) {
                     Button(onClick = {
                         viewModel.isChoosingShootingTarget = true
                     }) {
@@ -231,12 +229,22 @@ fun GameDisplay(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMo
     LaunchedEffect(viewModel.currentGameState) {
         if (viewModel.isShowingGameSetup) {
             if (viewModel.currentGameState == GameState.RESTOCKING) {
-                Toast.makeText(context, "Out of ammo! Restocking...", Toast.LENGTH_LONG).show()
                 delay(3000)
                 viewModel.finishShowingOutOfAmmoScreen()
             }
             delay(3000)
             viewModel.finishShowingGameSetup()
+        }
+    }
+
+    LaunchedEffect(viewModel.messageController.currentMessage) {
+        viewModel.messageController.currentMessage?.let {
+            Toast.makeText(
+                context,
+                "${context.getString(it.source.nameResId)}: ${context.getString(it.messageType.stringResId)}",
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.messageController.clearMessage()
         }
     }
 

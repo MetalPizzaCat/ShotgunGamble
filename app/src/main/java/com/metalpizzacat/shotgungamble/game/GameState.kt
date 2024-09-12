@@ -27,10 +27,6 @@ enum class GameState {
     USING_ITEM,
 
     /**
-     * Player is choosing which item to steal from dealer
-     */
-    //STEAL_ITEM,
-    /**
      * One of the players died
      */
     GAME_OVER

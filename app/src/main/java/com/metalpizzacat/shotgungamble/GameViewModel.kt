@@ -11,16 +11,22 @@ import com.metalpizzacat.shotgungamble.game.Item
 import com.metalpizzacat.shotgungamble.game.RevealedShellData
 import com.metalpizzacat.shotgungamble.game.RevealedShellNaming
 import com.metalpizzacat.shotgungamble.game.Shotgun
+import com.metalpizzacat.shotgungamble.message.MessageController
+import com.metalpizzacat.shotgungamble.message.MessageType
 import com.metalpizzacat.shotgungamble.shake.ShakeConfig
 import com.metalpizzacat.shotgungamble.shake.ShakeController
+import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 class GameViewModel : ViewModel() {
 
-    val player: Gambler = Gambler()
-    val dealer: Gambler = Gambler()
+    val player: Gambler = Gambler(R.string.player)
+    val dealer: Gambler = Gambler(R.string.dealer)
+
+    val shotgun: Shotgun = Shotgun()
 
     val shakeController = ShakeController()
+    val messageController = MessageController()
 
     var currentGameState by mutableStateOf(GameState.NORMAL)
         private set
@@ -37,8 +43,18 @@ class GameViewModel : ViewModel() {
         get() = currentGameState == GameState.RESTOCKING || currentGameState == GameState.SHOWING_GAME_SETUP
 
 
-    var playerTurn by mutableStateOf(true)
+    var isPlayerTurn by mutableStateOf(true)
         private set
+
+    /**
+     * Which gambler is currently doing stuff
+     */
+    val currentPlayer: Gambler
+        get() = if (isPlayerTurn) {
+            player
+        } else {
+            dealer
+        }
 
     var maxHealthForRound by mutableIntStateOf(5)
         private set
@@ -70,26 +86,26 @@ class GameViewModel : ViewModel() {
             field = value
         }
 
-    val shotgun: Shotgun = Shotgun()
+
 
     /**
      * Switches to the opponent turn of it the opponent has to skip a turn, remains the same
      */
     private fun advanceTurn() {
-        val nextGambler: Gambler = if (!playerTurn) {
+        val nextGambler: Gambler = if (!isPlayerTurn) {
             player
         } else {
             dealer
         }
 
         if (!nextGambler.handcuffed) {
-            playerTurn = !playerTurn
+            isPlayerTurn = !isPlayerTurn
         } else {
             nextGambler.handcuffed = false
         }
     }
 
-    fun getOppositeGambler(gambler: Gambler): Gambler =
+    private fun getOppositeGambler(gambler: Gambler): Gambler =
         if (gambler == player) {
             dealer
         } else {
@@ -119,7 +135,7 @@ class GameViewModel : ViewModel() {
      */
     private fun softRestartRound() {
         shotgun.generateShells()
-        playerTurn = true
+        isPlayerTurn = true
         player.lastDrawnItems.clear()
         dealer.lastDrawnItems.clear()
         val itemsForRound = Random.nextInt(1, 5)
@@ -168,6 +184,14 @@ class GameViewModel : ViewModel() {
         currentGameState = GameState.NORMAL
 
 
+        messageController.displayMessage(
+            currentPlayer,
+            if (shotgun.isCurrentShellLive) {
+                MessageType.SHOT_LIVE
+            } else {
+                MessageType.SHOT_BLANK
+            }
+        )
         if (shotgun.isCurrentShellLive) {
             damageGambler(target, shotgun.damage)
             advanceTurn()
@@ -196,7 +220,8 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    fun runDealerLogic() {
+    suspend fun runDealerLogic() {
+        delay(100)
         val chanceOfLive =
             (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() / shotgun.liveCount.toFloat()
         val chanceOfBlank =
@@ -218,9 +243,20 @@ class GameViewModel : ViewModel() {
      */
     private fun applyItem(item: Item, user: Gambler, target: Gambler) {
         when (item) {
-            Item.HANDSAW -> shotgun.isSawedOff = true
-            Item.BEER -> ejectShell()
-            Item.HANDCUFFS -> target.handcuffed = true
+            Item.HANDSAW -> {
+                shotgun.isSawedOff = true
+                messageController.displayMessage(currentPlayer, MessageType.USED_SAW)
+            }
+
+            Item.BEER -> {
+                ejectShell()
+                messageController.displayMessage(currentPlayer, MessageType.USED_BEER)
+            }
+
+            Item.HANDCUFFS -> {
+                target.handcuffed = true
+                messageController.displayMessage(currentPlayer, MessageType.USED_CUFFS)
+            }
 
             Item.PHONE -> {
                 if (shotgun.currentShell == shotgun.shellCount - 1) {
@@ -230,7 +266,7 @@ class GameViewModel : ViewModel() {
                     )
                 } else {
                     val shellNumber =
-                        Random.nextInt(shotgun.currentShell, shotgun.shellCount)
+                        Random.nextInt(shotgun.currentShell + 1, shotgun.shellCount)
                     lastRevealedShell = RevealedShellData(
                         RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
                         shotgun[shellNumber]
@@ -238,18 +274,31 @@ class GameViewModel : ViewModel() {
                 }
             }
 
-            Item.ADRENALIN -> isPlayerStealingFromDealer = true
+            Item.ADRENALIN -> {
+                isPlayerStealingFromDealer = true
+                messageController.displayMessage(currentPlayer, MessageType.USED_ADRENALIN)
+            }
 
-            Item.INVERTER -> shotgun.isShellInverted = !shotgun.isShellInverted
+            Item.INVERTER -> {
+                shotgun.isShellInverted = !shotgun.isShellInverted
+                messageController.displayMessage(currentPlayer, MessageType.USED_INVERTER)
+            }
+
             Item.MEDICINE -> {
                 if (Random.nextBoolean()) {
                     user.dealDamage(-2)
+                    messageController.displayMessage(currentPlayer, MessageType.USED_PILLS_SUCCESS)
                 } else {
                     damageGambler(user, 1)
+                    messageController.displayMessage(currentPlayer, MessageType.USED_PILLS_FAIL)
                 }
             }
 
-            Item.SMOKES -> user.dealDamage(-1)
+            Item.SMOKES -> {
+                user.dealDamage(-1)
+                messageController.displayMessage(currentPlayer, MessageType.USED_SMOKE)
+            }
+
             Item.GLASS -> {
                 lastRevealedShell = RevealedShellData(
                     RevealedShellNaming.CURRENT,
