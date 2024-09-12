@@ -13,5 +13,5 @@ enum class Item(
     HANDSAW(R.drawable.handsaw, R.string.handsaw_name, R.string.handsaw_desc),
     BEER(R.drawable.beer, R.string.beer_name, R.string.beer_desc),
     HANDCUFFS(R.drawable.handcuffs, R.string.cuff_name, R.string.cuff_desc),
-    PHONE(R.drawable.missing, R.string.phone_name, R.string.phone_desc)
+    PHONE(R.drawable.phone, R.string.phone_name, R.string.phone_desc)
 }

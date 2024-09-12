@@ -11,4 +11,5 @@ enum class RevealedShellNaming(val textResId: Int) {
     SIXTH(R.string.shell_5),
     SEVENTH(R.string.shell_6),
     EIGHT(R.string.shell_7),
+    TOUGH_LUCK(R.string.phone_no_shell)
 }

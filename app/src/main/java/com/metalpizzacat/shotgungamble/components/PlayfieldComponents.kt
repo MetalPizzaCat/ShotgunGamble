@@ -30,6 +30,7 @@ import com.metalpizzacat.shotgungamble.GameViewModel
 import com.metalpizzacat.shotgungamble.R
 import com.metalpizzacat.shotgungamble.game.GameState
 import com.metalpizzacat.shotgungamble.game.Item
+import com.metalpizzacat.shotgungamble.game.RevealedShellNaming
 import com.metalpizzacat.shotgungamble.shake.shake
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -127,19 +128,21 @@ fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
     }
 
     viewModel.lastRevealedShell?.let {
-        ShowToast(
-            text = "${stringResource(id = it.number.textResId)} ${
-                if (it.isLive) {
-                    "Live"
-                } else {
-                    "Blank"
-                }
-            }"
-        )
-    }
-
-    LaunchedEffect(viewModel.lastRevealedShell) {
-        delay(10)
+        if (it.number == RevealedShellNaming.TOUGH_LUCK) {
+            ShowToast(
+                text = stringResource(id = it.number.textResId)
+            )
+        } else {
+            ShowToast(
+                text = "${stringResource(id = it.number.textResId)} ${
+                    if (it.isLive) {
+                        "Live"
+                    } else {
+                        "Blank"
+                    }
+                }"
+            )
+        }
         viewModel.lastRevealedShell = null
     }
     Column(modifier = modifier) {
@@ -221,7 +224,7 @@ fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
             maxHealth = viewModel.maxHealthForRound,
             items = viewModel.player.items,
             handcuffed = viewModel.player.handcuffed,
-            onItemSelected = { viewModel.startChoosingItem(it) }
+            onItemSelected = { viewModel.selectedItem = it }
         )
     }
 }
@@ -325,12 +328,12 @@ fun GameDisplay(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMo
             }
 
             GameState.USING_ITEM -> {
-                viewModel.currentItem?.let {
+                viewModel.selectedItem?.let {
                     ItemUsageScreen(
                         modifier = modifier.fillMaxSize(),
                         item = it,
                         onAccepted = { viewModel.useItem(it, viewModel.player) },
-                        onCanceled = { viewModel.stopChoosingItem() })
+                        onCanceled = { viewModel.selectedItem = null })
                 }
             }
 

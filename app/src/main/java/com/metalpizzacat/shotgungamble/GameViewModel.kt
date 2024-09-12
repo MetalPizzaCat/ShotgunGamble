@@ -32,11 +32,6 @@ class GameViewModel : ViewModel() {
 
     var lastRevealedShell by mutableStateOf<RevealedShellData?>(null)
 
-    /**
-     * Which item is player currently trying to use
-     */
-    var currentItem by mutableStateOf<Item?>(null)
-        private set
 
     /**
      * If true then the setup screen should be visible
@@ -52,17 +47,9 @@ class GameViewModel : ViewModel() {
         private set
 
 
-    val shotgun: Shotgun = Shotgun()
-
-
-    fun restartGame() {
-        maxHealthForRound = Random.nextInt(2, 6)
-        player.reset(maxHealthForRound)
-        dealer.reset(maxHealthForRound)
-        currentGameState = GameState.SHOWING_GAME_SETUP
-        softRestartRound()
-    }
-
+    /**
+     * Is player currently using shotgun and determining who to shoot?
+     */
     var isChoosingShootingTarget: Boolean
         get() = currentGameState == GameState.USING_SHOTGUN
         set(value) {
@@ -73,22 +60,49 @@ class GameViewModel : ViewModel() {
             }
         }
 
+    /**
+     * Item that was currently selected to be considered to be used
+     */
+    var selectedItem: Item? = null
+        set(value) {
+            currentGameState = if (value != null) {
+                GameState.USING_ITEM
+            } else {
+                GameState.NORMAL
+            }
+            field = value
+        }
 
-    fun startChoosingItem(item: Item) {
-        currentGameState = GameState.USING_ITEM
-        currentItem = item
+    val shotgun: Shotgun = Shotgun()
+
+    /**
+     * Switches to the opponent turn of it the opponent has to skip a turn, remains the same
+     */
+    private fun advanceTurn() {
+        val nextGambler: Gambler = if (!playerTurn) {
+            player
+        } else {
+            dealer
+        }
+
+        if (!nextGambler.handcuffed) {
+            playerTurn = !playerTurn
+        } else {
+            nextGambler.handcuffed = false
+        }
+    }
+
+    fun restartGame() {
+        maxHealthForRound = Random.nextInt(2, 6)
+        player.reset(maxHealthForRound)
+        dealer.reset(maxHealthForRound)
+        currentGameState = GameState.SHOWING_GAME_SETUP
+        softRestartRound()
     }
 
     fun finishShowingOutofAmmoScreen() {
         currentGameState = GameState.SHOWING_GAME_SETUP
     }
-
-
-    fun stopChoosingItem() {
-        currentGameState = GameState.NORMAL
-        currentItem = null
-    }
-
 
     private fun endRound() {
         currentGameState = GameState.GAME_OVER
@@ -104,7 +118,7 @@ class GameViewModel : ViewModel() {
         val itemsForRound = Random.nextInt(1, 5)
         for (i in 0..<itemsForRound) {
             //player.addItem(Item.entries.random())
-            player.addItem(Item.PHONE)
+            player.addItem(Item.HANDCUFFS)
         }
         for (i in 0..<itemsForRound) {
             dealer.addItem(Item.entries.random())
@@ -138,12 +152,12 @@ class GameViewModel : ViewModel() {
                 if (!isUsingImmortalityCheat) {
                     target.dealDamage(shotgun.damage)
                 }
-                playerTurn = !playerTurn
+                advanceTurn()
             } else if (target == shooter) {
                 // skip a turn
             } else {
                 // if we shot with a blank we loose turn
-                playerTurn = !playerTurn
+                advanceTurn()
             }
             if (target.health <= 0) {
                 endRound()
@@ -195,11 +209,18 @@ class GameViewModel : ViewModel() {
             }
 
             Item.PHONE -> {
-                val shellNumber = Random.nextInt(shotgun.currentShell, shotgun.shellCount)
-                lastRevealedShell = RevealedShellData(
-                    RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
-                    shotgun[shellNumber]
-                )
+                if (shotgun.currentShell == shotgun.shellCount - 1) {
+                    lastRevealedShell = RevealedShellData(
+                        RevealedShellNaming.TOUGH_LUCK,
+                        false
+                    )
+                } else {
+                    val shellNumber = Random.nextInt(shotgun.currentShell, shotgun.shellCount)
+                    lastRevealedShell = RevealedShellData(
+                        RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
+                        shotgun[shellNumber]
+                    )
+                }
             }
         }
         return true
