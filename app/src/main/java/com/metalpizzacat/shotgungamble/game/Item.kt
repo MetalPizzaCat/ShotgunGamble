@@ -14,7 +14,7 @@ enum class Item(
     BEER(R.drawable.beer, R.string.beer_name, R.string.beer_desc),
     HANDCUFFS(R.drawable.handcuffs, R.string.cuff_name, R.string.cuff_desc),
     PHONE(R.drawable.phone, R.string.phone_name, R.string.phone_desc),
-    ADRENALIN(R.drawable.missing, R.string.andrenalin_name, R.string.adrenalin_desc),
+    ADRENALIN(R.drawable.adrenalin, R.string.andrenalin_name, R.string.adrenalin_desc),
     INVERTER(R.drawable.inverter, R.string.inv_name, R.string.inv_desc),
     MEDICINE(R.drawable.medicine, R.string.med_name, R.string.med_desc),
     SMOKES(R.drawable.smokes, R.string.smoke_name, R.string.smoke_desc),

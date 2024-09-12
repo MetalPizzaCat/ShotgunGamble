@@ -2,8 +2,6 @@ package com.metalpizzacat.shotgungamble.components
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +14,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,7 +30,6 @@ import com.metalpizzacat.shotgungamble.game.Item
 import com.metalpizzacat.shotgungamble.game.RevealedShellNaming
 import com.metalpizzacat.shotgungamble.shake.shake
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 
 /**
@@ -80,6 +76,7 @@ fun LoadoutDisplay(
             for (item in newPlayerItems) {
                 Icon(
                     painterResource(id = item.resource),
+                    tint = Color.Unspecified,
                     contentDescription = stringResource(item.descriptionRes)
                 )
             }
@@ -113,11 +110,8 @@ fun ShowToast(text: String) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewModel()) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     LaunchedEffect(viewModel.shotgun.currentShell) {
         if (!viewModel.playerTurn) {
@@ -145,87 +139,88 @@ fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
         }
         viewModel.lastRevealedShell = null
     }
-    Column(modifier = modifier) {
-        Column {
-            Text(
-                text = "Total shells left: ${viewModel.shotgun.shellCount}", modifier = Modifier
-                    .combinedClickable(
-                        onLongClickLabel = "Enable immortality",
-                        onClick = {},
-                        onLongClick = {
-                            scope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        if (viewModel.isUsingImmortalityCheat) {
-                                            "Disabled immortality"
-                                        } else {
-                                            "Enabled immortality"
-                                        },
-                                        Toast.LENGTH_LONG
-                                    )
-                                    .show()
-                                viewModel.isUsingImmortalityCheat =
-                                    !viewModel.isUsingImmortalityCheat
-                            }
-                        })
-            )
-
-            if (!viewModel.shotgun.isEmpty) {
-                Text(
-                    text = if (viewModel.shotgun.isCurrentShellLive) {
-                        "Live"
-                    } else {
-                        "Blank"
-                    }
-                )
-            }
-        }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(10.dp)
+    ) {
         PlayerBoard(
+            modifier = Modifier
+                .align(Alignment.TopCenter),
             health = viewModel.dealer.health,
             maxHealth = viewModel.maxHealthForRound,
             items = viewModel.dealer.items,
             handcuffed = viewModel.dealer.handcuffed,
-            onItemSelected = { /*this is dealer board we do nothing*/ }
+            onItemSelected = {
+                if (viewModel.isPlayerStealingFromDealer && viewModel.canUseItem(
+                        it,
+                        viewModel.player
+                    )
+                ) {
+                    viewModel.selectedItem = it
+                }
+            }
         )
-
-        Row {
-            if (viewModel.playerTurn) {
-                Button(onClick = {
-                    viewModel.isChoosingShootingTarget = true
-                }) {
+        if (!viewModel.isPlayerStealingFromDealer) {
+            Row(
+                modifier = modifier
+                    .align(Alignment.Center)
+            ) {
+                if (viewModel.playerTurn) {
+                    Button(onClick = {
+                        viewModel.isChoosingShootingTarget = true
+                    }) {
+                        Text(
+                            text = if (viewModel.shotgun.isSawedOff) {
+                                "Sawed-off Shotgun"
+                            } else {
+                                "Shotgun"
+                            }
+                        )
+                    }
+                } else {
+                    Text(text = "Dealer's turn")
+                }
+                viewModel.shotgun.lastShellType?.let { isLastShellLive ->
                     Text(
-                        text = if (viewModel.shotgun.isSawedOff) {
-                            "Sawed-off Shotgun"
+                        text = if (isLastShellLive) {
+                            "Live!"
                         } else {
-                            "Shotgun"
-                        }
+                            "Blank!"
+                        },
+                        modifier
+                            .shake(viewModel.shakeController)
+
                     )
                 }
-            } else {
-                Text(text = "Dealer's turn")
             }
-            viewModel.shotgun.lastShellType?.let { isLastShellLive ->
-                Text(
-                    text = if (isLastShellLive) {
-                        "Live!"
-                    } else {
-                        "Blank!"
-                    },
-                    modifier
-                        .shake(viewModel.shakeController)
-
+        } else {
+            Text(
+                text = "Pick an item from dealer's inventory",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(
+                    Alignment.Center
                 )
-            }
+            )
         }
-
         PlayerBoard(
+            modifier = Modifier
+                .align(Alignment.BottomCenter),
             health = viewModel.player.health,
             maxHealth = viewModel.maxHealthForRound,
             items = viewModel.player.items,
             handcuffed = viewModel.player.handcuffed,
-            onItemSelected = { viewModel.selectedItem = it }
+            onItemSelected = {
+                if (!viewModel.isPlayerStealingFromDealer && viewModel.canUseItem(
+                        it,
+                        viewModel.player
+                    )
+                ) {
+                    viewModel.selectedItem = it
+                }
+            }
         )
+
     }
 }
 
@@ -298,6 +293,11 @@ fun GameDisplay(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMo
                         modifier = Modifier.align(Alignment.Center)
                     ) {
                         Text(text = "Who do you want to shoot?")
+                        Icon(
+                            painterResource(id = R.drawable.shotgun),
+                            contentDescription = "Shotgun icon",
+                            tint = Color.Unspecified
+                        )
                         Row {
                             Text(text = "Possible damage: ")
                             Text(text = "${viewModel.shotgun.damage} points")
@@ -332,7 +332,15 @@ fun GameDisplay(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMo
                     ItemUsageScreen(
                         modifier = modifier.fillMaxSize(),
                         item = it,
-                        onAccepted = { viewModel.useItem(it, viewModel.player, viewModel.player) },
+                        onAccepted = {
+                            viewModel.useItem(
+                                it, viewModel.player, if (viewModel.isPlayerStealingFromDealer) {
+                                    viewModel.dealer
+                                } else {
+                                    viewModel.player
+                                }
+                            )
+                        },
                         onCanceled = { viewModel.selectedItem = null })
                 }
             }
@@ -353,7 +361,11 @@ fun ItemUsageScreen(
 ) {
     Box(modifier = modifier) {
         Column(modifier = Modifier.align(alignment = Alignment.Center)) {
-            Icon(painterResource(id = item.resource), contentDescription = "Item icon")
+            Icon(
+                painterResource(id = item.resource),
+                contentDescription = "Item icon",
+                tint = Color.Unspecified
+            )
             Text(text = stringResource(id = item.displayNameRes), textAlign = TextAlign.Center)
             Text(text = stringResource(id = item.descriptionRes), textAlign = TextAlign.Left)
             Row(modifier.fillMaxWidth()) {

@@ -25,13 +25,10 @@ class GameViewModel : ViewModel() {
     var currentGameState by mutableStateOf(GameState.NORMAL)
         private set
 
-    /**
-     * If true neither player or dealer will receive actual damage from the shot
-     */
-    var isUsingImmortalityCheat by mutableStateOf(false)
-
     var lastRevealedShell by mutableStateOf<RevealedShellData?>(null)
 
+    var isPlayerStealingFromDealer by mutableStateOf(false)
+        private set
 
     /**
      * If true then the setup screen should be visible
@@ -92,6 +89,14 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun getOppositeGambler(gambler: Gambler): Gambler =
+        if (gambler == player) {
+            dealer
+        } else {
+            player
+        }
+
+
     fun restartGame() {
         maxHealthForRound = Random.nextInt(2, 6)
         player.reset(maxHealthForRound)
@@ -145,9 +150,7 @@ class GameViewModel : ViewModel() {
      * Additional function that will trigger end of round events if health of any player drops below 0
      */
     private fun damageGambler(gambler: Gambler, damage: Int) {
-        if (!isUsingImmortalityCheat) {
-            gambler.dealDamage(damage)
-        }
+        gambler.dealDamage(damage)
         if (gambler.health <= 0) {
             endRound()
         }
@@ -206,23 +209,18 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    private fun applyItem(item: Item, user: Gambler, target: Gambler): Boolean {
+    /**
+     * Blindly apply the item logic
+     * This function performs no checks
+     * @param item Which item to use
+     * @param user Who is using the item
+     * @param target Who is the target of the item effect(if effect doesn't apply to user)
+     */
+    private fun applyItem(item: Item, user: Gambler, target: Gambler) {
         when (item) {
-            Item.HANDSAW -> {
-                if (!shotgun.isSawedOff) {
-                    shotgun.isSawedOff = true
-                } else {
-                    return false
-                }
-            }
-
+            Item.HANDSAW -> shotgun.isSawedOff = true
             Item.BEER -> ejectShell()
-            Item.HANDCUFFS -> {
-                if (target.handcuffed) {
-                    return false
-                }
-                target.handcuffed = true
-            }
+            Item.HANDCUFFS -> target.handcuffed = true
 
             Item.PHONE -> {
                 if (shotgun.currentShell == shotgun.shellCount - 1) {
@@ -231,7 +229,8 @@ class GameViewModel : ViewModel() {
                         false
                     )
                 } else {
-                    val shellNumber = Random.nextInt(shotgun.currentShell, shotgun.shellCount)
+                    val shellNumber =
+                        Random.nextInt(shotgun.currentShell, shotgun.shellCount)
                     lastRevealedShell = RevealedShellData(
                         RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
                         shotgun[shellNumber]
@@ -239,7 +238,8 @@ class GameViewModel : ViewModel() {
                 }
             }
 
-            Item.ADRENALIN -> TODO()
+            Item.ADRENALIN -> isPlayerStealingFromDealer = true
+
             Item.INVERTER -> shotgun.isShellInverted = !shotgun.isShellInverted
             Item.MEDICINE -> {
                 if (Random.nextBoolean()) {
@@ -257,7 +257,6 @@ class GameViewModel : ViewModel() {
                 )
             }
         }
-        return true
     }
 
     /**
@@ -269,19 +268,31 @@ class GameViewModel : ViewModel() {
      * @param holder Player that is holding the item and who will use the item on the successful use
      */
     fun useItem(item: Item, user: Gambler, holder: Gambler) {
-        applyItem(
-            item, if (user != player) {
-                dealer
-            } else {
-                player
-            }, if (user == player) {
-                dealer
-            } else {
-                player
-            }
-        )
+        applyItem(item, user, getOppositeGambler(user))
         currentGameState = GameState.NORMAL
         holder.items.remove(item)
+        if (item != Item.ADRENALIN) {
+            isPlayerStealingFromDealer = false
+        }
+    }
+
+    fun canUseItem(item: Item, user: Gambler): Boolean {
+        when (item) {
+            Item.HANDSAW -> return !shotgun.isSawedOff
+            Item.MEDICINE, Item.GLASS, Item.SMOKES, Item.INVERTER, Item.PHONE, Item.BEER -> return true
+            Item.HANDCUFFS -> return !getOppositeGambler(user).handcuffed
+            Item.ADRENALIN -> {
+                val excludedItems: ArrayList<Item> = ArrayList()
+                excludedItems.add(Item.ADRENALIN)
+                if (!shotgun.isSawedOff) {
+                    excludedItems.add(Item.HANDSAW)
+                }
+                if (!getOppositeGambler(user).handcuffed) {
+                    excludedItems.add(Item.HANDCUFFS)
+                }
+                return getOppositeGambler(user).canItemsBeStolen(excludedItems)
+            }
+        }
     }
 
 

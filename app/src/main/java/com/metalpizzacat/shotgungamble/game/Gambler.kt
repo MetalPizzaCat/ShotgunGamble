@@ -22,6 +22,13 @@ class Gambler {
         private set
 
     /**
+     * Can items be stolen via adrenalin
+     * This is true if this gambler has more than one item that is not adrenalin and that can be applied given the current state
+     */
+    fun canItemsBeStolen(excludedItems: List<Item> = listOf(Item.ADRENALIN)): Boolean =
+        items.any { !excludedItems.contains(it) }
+
+    /**
      * Apply damage to the gambler or heal gambler if damage is negative
      * @param damage How points to apply
      */

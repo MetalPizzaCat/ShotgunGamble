@@ -15,8 +15,21 @@ enum class GameState {
      * There is no more ammo left, but both players are still alive
      */
     RESTOCKING,
+
+    /**
+     * Selecting who to shoot with a shotgun
+     */
     USING_SHOTGUN,
+
+    /**
+     * Choosing whether to use item or not
+     */
     USING_ITEM,
+
+    /**
+     * Player is choosing which item to steal from dealer
+     */
+    //STEAL_ITEM,
     /**
      * One of the players died
      */
