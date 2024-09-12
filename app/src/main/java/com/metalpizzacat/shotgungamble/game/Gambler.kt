@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.math.max
+import kotlin.math.min
 
 class Gambler {
     val items = mutableStateListOf<Item>()
@@ -20,11 +21,12 @@ class Gambler {
     var maxHealth by mutableIntStateOf(3)
         private set
 
-    val canDoATurn: Boolean
-        get() = !handcuffed
-
+    /**
+     * Apply damage to the gambler or heal gambler if damage is negative
+     * @param damage How points to apply
+     */
     fun dealDamage(damage: Int) {
-        health = max(0, health - damage)
+        health = min(maxHealth, max(0, health - damage))
     }
 
     fun addItem(item: Item) {

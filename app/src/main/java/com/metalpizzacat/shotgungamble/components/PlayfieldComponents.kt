@@ -238,7 +238,7 @@ fun GameDisplay(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMo
             if (viewModel.currentGameState == GameState.RESTOCKING) {
                 Toast.makeText(context, "Out of ammo! Restocking...", Toast.LENGTH_LONG).show()
                 delay(3000)
-                viewModel.finishShowingOutofAmmoScreen()
+                viewModel.finishShowingOutOfAmmoScreen()
             }
             delay(3000)
             viewModel.finishShowingGameSetup()
@@ -332,7 +332,7 @@ fun GameDisplay(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMo
                     ItemUsageScreen(
                         modifier = modifier.fillMaxSize(),
                         item = it,
-                        onAccepted = { viewModel.useItem(it, viewModel.player) },
+                        onAccepted = { viewModel.useItem(it, viewModel.player, viewModel.player) },
                         onCanceled = { viewModel.selectedItem = null })
                 }
             }

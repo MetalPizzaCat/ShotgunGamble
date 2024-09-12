@@ -36,10 +36,20 @@ class Shotgun {
         private set
 
     /**
+     * If shell is inverted then when shot it will do the opposite
+     * This has no effect on the actual load out and will get reset once shotgun is used
+     */
+    var isShellInverted: Boolean = false
+
+    /**
      * Is the shell that would be used if shotgun is shot live
      */
     val isCurrentShellLive: Boolean
-        get() = shells[currentShell]
+        get() = if (isShellInverted) {
+            !shells[currentShell]
+        } else {
+            shells[currentShell]
+        }
 
     /**
      * If true that means that there are no shells left to shoot
@@ -76,22 +86,27 @@ class Shotgun {
             1
         }
 
-    operator fun get(i: Int) = shells[i]
+
+    operator fun get(i: Int) = if (i == currentShell) {
+        isCurrentShellLive
+    } else {
+        shells[i]
+    }
 
     /**
      * Advance the shell counter by one and update the state based on the used shell
      * @return false if there are no shells left
      */
-    fun shoot(): Boolean {
+    fun shoot() {
         if (currentShell >= shells.size) {
-            return false
+            return
         }
         // shotgun is restored after each shot no matter what
         isSawedOff = false
+        isShellInverted = false
         shotShells.add(isCurrentShellLive)
         lastShellType = isCurrentShellLive
         currentShell++
-        return true
     }
 
     init {
