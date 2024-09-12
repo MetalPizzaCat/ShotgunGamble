@@ -373,7 +373,10 @@ class GameViewModel : ViewModel() {
                     Item.GLASS -> {
                         knownShellValue = shotgun.isCurrentShellLive
                     }
-
+                    Item.BEER ->{
+                        // we ejected it so we don't know anymore
+                        knownShellValue = null
+                    }
                     Item.ADRENALIN -> {
                         stolenItem?.let {
                             useItem(stolenItem, dealer, player)
