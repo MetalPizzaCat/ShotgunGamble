@@ -11,6 +11,7 @@ import com.metalpizzacat.shotgungamble.game.Item
 import com.metalpizzacat.shotgungamble.game.RevealedShellData
 import com.metalpizzacat.shotgungamble.game.RevealedShellNaming
 import com.metalpizzacat.shotgungamble.game.Shotgun
+import com.metalpizzacat.shotgungamble.game.dealer.Dealer
 import com.metalpizzacat.shotgungamble.message.MessageController
 import com.metalpizzacat.shotgungamble.message.MessageType
 import com.metalpizzacat.shotgungamble.shake.ShakeConfig
@@ -21,7 +22,7 @@ import kotlin.random.Random
 class GameViewModel : ViewModel() {
 
     val player: Gambler = Gambler(R.string.player)
-    val dealer: Gambler = Gambler(R.string.dealer)
+    val dealer: Dealer = Dealer(R.string.dealer)
 
     val shotgun: Shotgun = Shotgun()
 
@@ -85,7 +86,6 @@ class GameViewModel : ViewModel() {
             }
             field = value
         }
-
 
 
     /**
@@ -167,7 +167,7 @@ class GameViewModel : ViewModel() {
      */
     private fun damageGambler(gambler: Gambler, damage: Int) {
         gambler.dealDamage(damage)
-        if (gambler.health <= 0) {
+        if (player.health <= 0 || dealer.health <= 0) {
             endRound()
         }
     }
@@ -204,7 +204,7 @@ class GameViewModel : ViewModel() {
 
         shotgun.shoot()
         displayShell()
-        if (shotgun.isEmpty) {
+        if (shotgun.isEmpty && currentGameState != GameState.GAME_OVER) {
             currentGameState = GameState.RESTOCKING
             softRestartRound()
         }
@@ -220,19 +220,200 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    suspend fun runDealerLogic() {
-        delay(100)
-        val chanceOfLive =
-            (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() / shotgun.liveCount.toFloat()
-        val chanceOfBlank =
-            (shotgun.blankCount - shotgun.shotShells.count { !it }).toFloat() / shotgun.blankCount.toFloat()
+    /**
+     * Pick item for dealer to use out of given inventory
+     */
+    private fun pickItemForDealerToSteal(
+        possibleShellValue: Boolean,
+        currentShellKnown: Boolean
+    ): Item? {
+        for (item in player.items) {
+            when (item) {
+                Item.HANDSAW -> if (!shotgun.isSawedOff && possibleShellValue) {
+                    // steal this if we are assuming that shell is live and shotgun has not been sawed
+                    return item
+                }
 
-        if (chanceOfBlank > chanceOfLive) {
-            shoot(target = dealer, shooter = dealer)
-        } else {
-            shoot(target = player, shooter = dealer)
+                Item.BEER -> if (shotgun.remainingShellCount > 1 && !possibleShellValue) {
+                    return item
+                }
+
+                Item.HANDCUFFS -> if (!player.handcuffed) {
+                    return item
+                }
+
+                Item.PHONE -> if (shotgun.remainingShellCount > 2) {
+                    return item
+                }
+
+                Item.ADRENALIN -> {/*we can't steal adrenalin*/
+                }
+
+                Item.INVERTER -> if (shotgun.remainingShellCount > 1 && !possibleShellValue) {
+                    return item
+                }
+
+                Item.MEDICINE -> if (dealer.health < dealer.maxHealth && dealer.health > 1) {
+                    return item
+                }
+
+                Item.SMOKES -> if (dealer.health < dealer.maxHealth) {
+                    return item
+                }
+
+                Item.GLASS -> if (!currentShellKnown && shotgun.remainingShellCount > 1) {
+                    return item
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Execute dealer logic exiting the loop only when dealer shots a live round
+     */
+    suspend fun runDealerLogic() {
+        var finishedTurn = false
+        var knownShellValue: Boolean? = null
+        var usedInverter = false
+
+        while (!finishedTurn) {
+            delay(3000)
+            val chanceOfLive =
+                (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() / shotgun.liveCount.toFloat()
+            val chanceOfBlank =
+                (shotgun.blankCount - shotgun.shotShells.count { !it }).toFloat() / shotgun.blankCount.toFloat()
+
+            val isShellPresumedToBeLive: Boolean = chanceOfLive >= chanceOfBlank
+
+            var itemChoice: Item? = null
+            var stolenItem: Item? = null
+
+            for (item in dealer.items) {
+                when (item) {
+                    Item.HANDSAW -> if (!shotgun.isSawedOff && (knownShellValue
+                            ?: isShellPresumedToBeLive)
+                    ) {
+                        itemChoice = item
+                        break
+                    }
+
+                    Item.BEER -> if (!(knownShellValue
+                            ?: isShellPresumedToBeLive) && shotgun.remainingShellCount > 1
+                    ) {
+                        // idk if it is a good logic but the idea is that if we don't have a live it is easier to eject
+                        // whether dealer will invert or eject depends on which item will be chosen first
+                        itemChoice = item
+                        break
+                    }
+
+                    Item.HANDCUFFS -> if (!player.handcuffed) {
+                        itemChoice = item
+                        break
+                    }
+
+                    Item.PHONE -> if (shotgun.remainingShellCount > 2) {
+                        itemChoice = item
+                        break
+                    }
+
+                    Item.ADRENALIN -> {
+                        stolenItem = pickItemForDealerToSteal(
+                            (knownShellValue
+                                ?: isShellPresumedToBeLive), knownShellValue != null
+                        )
+                        if (stolenItem != null) {
+                            itemChoice = item
+                            break
+                        }
+
+                    }
+
+                    Item.INVERTER -> if (!(knownShellValue
+                            ?: isShellPresumedToBeLive) && !usedInverter
+                    ) {
+                        // if we can generally guess or we know that the current shell value is blank we invert it
+                        // to avoid using all inverters and confusing ai we will limit inverter usage to 1 per turn
+                        usedInverter = true
+                        itemChoice = item
+                        break
+                    }
+
+                    Item.MEDICINE -> {
+                        // medicine is risky so we will only use it if we don't have smokes AND
+                        // we won't die on fail
+                        if (dealer.health < dealer.maxHealth && !dealer.items.contains(
+                                Item.SMOKES
+                            ) && dealer.health != 1
+                        ) {
+                            itemChoice = item
+                            break
+                        }
+                    }
+
+                    Item.SMOKES -> if (dealer.health < dealer.maxHealth) {
+                        itemChoice = item
+                        break
+                    }
+
+                    Item.GLASS -> if (knownShellValue == null) {
+                        itemChoice = item
+                        break
+                    }
+                }
+            }
+            if (itemChoice != null) {
+                when (itemChoice) {
+                    Item.PHONE -> {
+                        val shell = usePhone()
+                        dealer.knownShells[shell.number.ordinal + shotgun.currentShell] =
+                            shell.isLive
+                    }
+
+                    Item.GLASS -> {
+                        knownShellValue = shotgun.isCurrentShellLive
+                    }
+
+                    Item.ADRENALIN -> {
+                        stolenItem?.let {
+                            useItem(stolenItem, dealer, player)
+                        }
+                    }
+
+                    else -> {}
+                }
+                useItem(itemChoice, dealer, dealer)
+            } else {
+                if (knownShellValue ?: isShellPresumedToBeLive) {
+                    shoot(target = dealer, shooter = dealer)
+                } else {
+                    shoot(target = player, shooter = dealer)
+                }
+                finishedTurn = true
+            }
+
         }
     }
+
+    /**
+     * Run phone logic and return shell data
+     * @return Value of the
+     */
+    private fun usePhone(): RevealedShellData =
+        if (shotgun.currentShell == shotgun.shellCount - 1) {
+            RevealedShellData(
+                RevealedShellNaming.TOUGH_LUCK,
+                false
+            )
+        } else {
+            val shellNumber =
+                Random.nextInt(shotgun.currentShell + 1, shotgun.shellCount)
+            RevealedShellData(
+                RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
+                shotgun[shellNumber]
+            )
+        }
+
 
     /**
      * Blindly apply the item logic
@@ -258,23 +439,12 @@ class GameViewModel : ViewModel() {
                 messageController.displayMessage(currentPlayer, MessageType.USED_CUFFS)
             }
 
-            Item.PHONE -> {
-                if (shotgun.currentShell == shotgun.shellCount - 1) {
-                    lastRevealedShell = RevealedShellData(
-                        RevealedShellNaming.TOUGH_LUCK,
-                        false
-                    )
-                } else {
-                    val shellNumber =
-                        Random.nextInt(shotgun.currentShell + 1, shotgun.shellCount)
-                    lastRevealedShell = RevealedShellData(
-                        RevealedShellNaming.entries[shellNumber - shotgun.currentShell],
-                        shotgun[shellNumber]
-                    )
-                }
+            // player doesn't get to see the value of the shell
+            Item.PHONE -> if (user == player) {
+                lastRevealedShell = usePhone()
             }
 
-            Item.ADRENALIN -> {
+            Item.ADRENALIN -> if (user != dealer) {
                 isPlayerStealingFromDealer = true
                 messageController.displayMessage(currentPlayer, MessageType.USED_ADRENALIN)
             }
@@ -299,7 +469,7 @@ class GameViewModel : ViewModel() {
                 messageController.displayMessage(currentPlayer, MessageType.USED_SMOKE)
             }
 
-            Item.GLASS -> {
+            Item.GLASS -> if (user == player) {
                 lastRevealedShell = RevealedShellData(
                     RevealedShellNaming.CURRENT,
                     shotgun.isCurrentShellLive

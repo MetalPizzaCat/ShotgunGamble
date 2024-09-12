@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.max
 import kotlin.math.min
 
-class Gambler(val nameResId: Int) {
+open class Gambler(val nameResId: Int) {
     val items = mutableStateListOf<Item>()
 
     val lastDrawnItems: ArrayList<Item> = ArrayList()
@@ -43,7 +43,7 @@ class Gambler(val nameResId: Int) {
         }
     }
 
-    fun reset(roundHealth: Int) {
+    open fun reset(roundHealth: Int) {
         maxHealth = roundHealth
         health = roundHealth
 

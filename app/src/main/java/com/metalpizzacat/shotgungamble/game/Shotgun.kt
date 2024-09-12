@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.random.Random
 
 class Shotgun {
     /**
@@ -75,6 +76,12 @@ class Shotgun {
         get() = shells.size
 
     /**
+     * How many unused shells are left in the gun
+     */
+    val remainingShellCount: Int
+        get() = shells.size - currentShell
+
+    /**
      * How many points of damage should the shotgun deal.
      * * 1 if normal
      * * 2 is sawed off
@@ -114,8 +121,8 @@ class Shotgun {
     }
 
     fun generateShells() {
-        liveCount = 1//Random.nextInt(1, 5)
-        blankCount = 1//Random.nextInt(1, 5)
+        liveCount = Random.nextInt(1, 5)
+        blankCount = Random.nextInt(1, 5)
         currentShell = 0
         shells = ArrayList()
         for (i in 0..<liveCount) {

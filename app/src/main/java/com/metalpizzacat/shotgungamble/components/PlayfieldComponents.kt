@@ -107,8 +107,6 @@ fun PlayField(modifier: Modifier = Modifier, viewModel: GameViewModel = viewMode
     val context = LocalContext.current
     LaunchedEffect(viewModel.shotgun.currentShell) {
         if (!viewModel.isPlayerTurn) {
-            // fake delay to avoid everything happening instantly
-            delay(1000)
             viewModel.runDealerLogic()
         }
     }
