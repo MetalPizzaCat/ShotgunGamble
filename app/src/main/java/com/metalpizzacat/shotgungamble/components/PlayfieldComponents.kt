@@ -44,11 +44,12 @@ fun LoadoutDisplay(
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
-        Text(text = "Items drawn by dealer")
+        Text(text = stringResource(R.string.items_drawn_by_dealer))
         Row {
             for (item in newDealerItems) {
                 Icon(
                     painterResource(id = item.resource),
+                    tint = Color.Unspecified,
                     contentDescription = stringResource(item.descriptionRes)
                 )
             }
@@ -71,7 +72,7 @@ fun LoadoutDisplay(
                 )
             }
         }
-        Text(text = "Items drawn by player")
+        Text(text = stringResource(R.string.items_drawn_by_player))
         Row {
             for (item in newPlayerItems) {
                 Icon(
@@ -90,13 +91,13 @@ fun GameOverScreen(modifier: Modifier = Modifier, viewModel: GameViewModel = vie
         Column(modifier = Modifier.align(Alignment.Center)) {
             Text(
                 text = if (viewModel.dealer.health == 0) {
-                    "Player won!"
+                    stringResource(R.string.player_won)
                 } else {
-                    "Dealer won!"
+                    stringResource(R.string.dealer_won)
                 }
             )
             Button(onClick = { viewModel.restartGame() }) {
-                Text(text = "Start a new game")
+                Text(text = stringResource(R.string.start_a_new_game))
             }
         }
     }

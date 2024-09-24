@@ -116,22 +116,27 @@ class Shotgun {
         currentShell++
     }
 
-    init {
-        generateShells()
-    }
-
-    fun generateShells() {
-        liveCount = Random.nextInt(1, 5)
-        blankCount = Random.nextInt(1, 5)
-        currentShell = 0
+    fun generateShells(testLayout: ShotgunTestLayout? = null) {
         shells = ArrayList()
-        for (i in 0..<liveCount) {
-            shells.add(true)
+        if (testLayout != null) {
+            liveCount = testLayout.liveCount
+            blankCount = testLayout.blankCount
+            for (shell in testLayout.shells) {
+                shells.add(shell)
+            }
+        } else {
+            liveCount = Random.nextInt(1, 5)
+            blankCount = Random.nextInt(1, 5)
+
+            for (i in 0..<liveCount) {
+                shells.add(true)
+            }
+            for (i in 0..<blankCount) {
+                shells.add(false)
+            }
+            shells.shuffle()
         }
-        for (i in 0..<blankCount) {
-            shells.add(false)
-        }
-        shells.shuffle()
+        currentShell = 0
         shotShells.clear()
         lastShellType = null
     }

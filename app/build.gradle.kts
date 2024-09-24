@@ -10,9 +10,10 @@ android {
     defaultConfig {
         applicationId = "com.metalpizzacat.shotgungamble"
         minSdk = 24
+        //noinspection OldTargetApi
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

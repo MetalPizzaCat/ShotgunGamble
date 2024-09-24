@@ -274,32 +274,46 @@ class GameViewModel : ViewModel() {
      */
     suspend fun runDealerLogic() {
         var finishedTurn = false
-        var knownShellValue: Boolean? = null
+        // value of the current shell, null if we have no record of it from previous turns
+        // otherwise we take the value from the dictionary
+        var knownShellValue: Boolean? = dealer.knownShells[shotgun.currentShell]
         var usedInverter = false
 
         while (!finishedTurn) {
+            // the delay is there just to act as "animation"
+            // otherwise everything happens instantly and player has no time to process what happened
             delay(3000)
-            val chanceOfLive =
-                (shotgun.liveCount - shotgun.shotShells.count { it }).toFloat() / shotgun.liveCount.toFloat()
-            val chanceOfBlank =
-                (shotgun.blankCount - shotgun.shotShells.count { !it }).toFloat() / shotgun.blankCount.toFloat()
 
-            val isShellPresumedToBeLive: Boolean = chanceOfLive >= chanceOfBlank
+
+            val isShellPresumedToBeLive: Boolean = if (knownShellValue != null) {
+                knownShellValue
+            } else {
+                // if we don't know the current shell we calculate the chance by just
+                // counting how many shells we have shot and how many we know
+                val possibleLive =
+                    (shotgun.liveCount - shotgun.shotShells.count { it } - dealer.knownShells.filter { it.key > shotgun.currentShell }
+                        .count { it.value }).toFloat() / shotgun.liveCount.toFloat()
+                val possibleBlank =
+                    (shotgun.blankCount - shotgun.shotShells.count { !it } - dealer.knownShells.filter { it.key > shotgun.currentShell }
+                        .count { !it.value }).toFloat() / shotgun.blankCount.toFloat()
+
+                // if number of the remaining lives is bigger than blanks than chance is higher
+                // but this is also biased towards blank to prevent dealer from shooting himself in the face
+                possibleLive > possibleBlank
+            }
+
 
             var itemChoice: Item? = null
             var stolenItem: Item? = null
 
             for (item in dealer.items) {
                 when (item) {
-                    Item.HANDSAW -> if (!shotgun.isSawedOff && (knownShellValue
-                            ?: isShellPresumedToBeLive)
-                    ) {
+                    Item.HANDSAW -> if (!shotgun.isSawedOff && isShellPresumedToBeLive) {
                         itemChoice = item
                         break
                     }
 
-                    Item.BEER -> if (!(knownShellValue
-                            ?: isShellPresumedToBeLive) && shotgun.remainingShellCount > 1
+                    Item.BEER -> if (!isShellPresumedToBeLive && shotgun.remainingShellCount > 1
                     ) {
                         // idk if it is a good logic but the idea is that if we don't have a live it is easier to eject
                         // whether dealer will invert or eject depends on which item will be chosen first
@@ -319,8 +333,7 @@ class GameViewModel : ViewModel() {
 
                     Item.ADRENALIN -> {
                         stolenItem = pickItemForDealerToSteal(
-                            (knownShellValue
-                                ?: isShellPresumedToBeLive), knownShellValue != null
+                            isShellPresumedToBeLive, knownShellValue != null
                         )
                         if (stolenItem != null) {
                             itemChoice = item
@@ -329,8 +342,7 @@ class GameViewModel : ViewModel() {
 
                     }
 
-                    Item.INVERTER -> if (!(knownShellValue
-                            ?: isShellPresumedToBeLive) && !usedInverter
+                    Item.INVERTER -> if (!isShellPresumedToBeLive && !usedInverter
                     ) {
                         // if we can generally guess or we know that the current shell value is blank we invert it
                         // to avoid using all inverters and confusing ai we will limit inverter usage to 1 per turn
@@ -373,10 +385,12 @@ class GameViewModel : ViewModel() {
                     Item.GLASS -> {
                         knownShellValue = shotgun.isCurrentShellLive
                     }
-                    Item.BEER ->{
+
+                    Item.BEER -> {
                         // we ejected it so we don't know anymore
                         knownShellValue = null
                     }
+
                     Item.ADRENALIN -> {
                         stolenItem?.let {
                             useItem(stolenItem, dealer, player)
@@ -387,10 +401,14 @@ class GameViewModel : ViewModel() {
                 }
                 useItem(itemChoice, dealer, dealer)
             } else {
-                if (knownShellValue ?: isShellPresumedToBeLive) {
-                    shoot(target = dealer, shooter = dealer)
-                } else {
+                // if dealer used an inverter than we have to invert the logic
+                // otherwise dealer might invert the shell to make it more likely to be live
+                // and shoot itself
+                // kotlin's bit math has weird syntax i don't like it
+                if (isShellPresumedToBeLive xor usedInverter) {
                     shoot(target = player, shooter = dealer)
+                } else {
+                    shoot(target = dealer, shooter = dealer)
                 }
                 finishedTurn = true
             }

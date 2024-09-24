@@ -41,4 +41,9 @@
     <string name="used_inverter">Inverted current shell</string>
     <string name="player">Player</string>
     <string name="dealer">Dealer</string>
+    <string name="player_won">Player won!</string>
+    <string name="dealer_won">Dealer won!</string>
+    <string name="start_a_new_game">Start a new game</string>
+    <string name="items_drawn_by_player">Items drawn by player</string>
+    <string name="items_drawn_by_dealer">Items drawn by dealer</string>
 </resources>
